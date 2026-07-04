@@ -11,14 +11,13 @@ import com.vedanova.platform.contracts.DispatchParams
 import com.vedanova.platform.contracts.EscalationParams
 import com.vedanova.platform.contracts.ShopConfig
 import com.vedanova.platform.contracts.ShopifyOrderContext
+import com.vedanova.platform.contracts.Simulation
 import com.vedanova.platform.contracts.UpdateCallStatusActivityInput
 import com.vedanova.platform.contracts.WritebackParams
 import com.vedanova.platform.livekit.LiveKitTelephonyAdapter
 import com.vedanova.platform.persistence.CallRepository
 import com.vedanova.platform.persistence.EscalationRepository
-import com.vedanova.platform.service.CallWritebackService
 import com.vedanova.platform.service.ShopConfigService
-import com.vedanova.platform.shopify.ShopifyRegistry
 import com.vedanova.platform.storage.RecordingStorage
 import com.vedanova.platform.telephony.TelephonyAdapter
 import org.springframework.stereotype.Component
@@ -26,12 +25,10 @@ import org.springframework.stereotype.Component
 @Component
 class AvipActivitiesImpl(
     private val shopConfigService: ShopConfigService,
-    private val shopifyRegistry: ShopifyRegistry,
     private val liveKitTelephonyAdapter: LiveKitTelephonyAdapter,
     private val telephonyAdapter: TelephonyAdapter,
     private val callRepository: CallRepository,
     private val escalationRepository: EscalationRepository,
-    private val callWritebackService: CallWritebackService,
     private val complianceService: ComplianceService,
     private val recordingStorage: RecordingStorage,
     private val avipProperties: AvipProperties,
@@ -41,8 +38,8 @@ class AvipActivitiesImpl(
     override fun loadShopConfig(shopId: String): ShopConfig = shopConfigService.loadConfig(shopId)
 
     override fun fetchOrderContext(shopId: String, orderId: String): ShopifyOrderContext {
-        val lang = avipProperties.defaultLanguage.ifBlank { "hi-IN" }
-        return shopifyRegistry.clientForShop(shopId).getOrder(orderId, lang)
+        // Return a mock simulated context since Shopify integrations are removed
+        return Simulation.fakeOrderContext(orderId)
     }
 
     override fun dispatchLivekitAgent(params: DispatchParams): DispatchCallResult =
@@ -87,6 +84,6 @@ class AvipActivitiesImpl(
     }
 
     override fun writebackShopifyAttempt(params: WritebackParams) {
-        callWritebackService.writebackCompleted(params.shopId, params.orderContext, params.payload)
+        // Shopify writeback removed. No-op.
     }
 }

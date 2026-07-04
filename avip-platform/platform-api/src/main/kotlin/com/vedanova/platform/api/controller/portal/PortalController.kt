@@ -61,12 +61,8 @@ class PortalApiController(
     }
 
     @GetMapping("/shops")
-    fun listShops(@RequestAttribute("portalSession") session: PortalSession): PortalListShopsResponse {
-        val shops =
-            shopRepository.listForAccount(session.accountId).map { shop ->
-                PortalShopItemDto(id = shop.id, shopDomain = shop.shopDomain)
-            }
-        return PortalListShopsResponse(shops = shops)
+    fun listShops(@RequestAttribute("portalSession") @Suppress("UNUSED_PARAMETER") session: PortalSession): PortalListShopsResponse {
+        return PortalListShopsResponse(shops = emptyList())
     }
 }
 

@@ -44,16 +44,12 @@ function NavActions({ mobile = false }: { mobile?: boolean }) {
   const { light } = useNavChrome();
 
   const secondaryClass = light && !mobile ? "!text-neutral-200 hover:!text-white" : undefined;
-  const primaryClass = light && !mobile ? "!bg-white !text-black" : undefined;
 
   if (mobile) {
     return (
       <div className="flex w-full flex-col gap-3">
         <NavbarButton as={Link} to="/request-demo" variant="secondary" className="w-full">
           Try the demo
-        </NavbarButton>
-        <NavbarButton as={Link} to="/install" variant="primary" className="w-full">
-          Install on Shopify
         </NavbarButton>
       </div>
     );
@@ -63,9 +59,6 @@ function NavActions({ mobile = false }: { mobile?: boolean }) {
     <div className="relative z-20 flex shrink-0 items-center gap-1.5">
       <NavbarButton as={Link} to="/request-demo" variant="secondary" className={secondaryClass}>
         Try the demo
-      </NavbarButton>
-      <NavbarButton as={Link} to="/install" variant="primary" className={primaryClass}>
-        Install on Shopify
       </NavbarButton>
     </div>
   );

@@ -78,19 +78,9 @@ class AdminController(
     @GetMapping("/shops")
     fun listShops(
         @RequestAttribute("adminUsername") @Suppress("UNUSED_PARAMETER") username: String,
-        @RequestParam(defaultValue = "100") limit: Int,
+        @RequestParam(defaultValue = "100") @Suppress("UNUSED_PARAMETER") limit: Int,
     ): AdminListShopsResponse =
-        AdminListShopsResponse(
-            shops =
-                shopRepository.listAll(limit).map { shop ->
-                    AdminShopItemDto(
-                        id = shop.id,
-                        shopDomain = shop.shopDomain,
-                        installedAt = shop.installedAt?.let(ApiFormats::rfc3339),
-                        callCount = shop.callCount,
-                    )
-                },
-        )
+        AdminListShopsResponse(shops = emptyList())
 
     @GetMapping("/calls")
     fun listCalls(
