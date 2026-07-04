@@ -1,0 +1,145 @@
+# avip-platform — self-contained local/production-shaped stack
+#
+# From repo root:
+#   cp .env.example .env
+#   task up
+#
+# URLs:
+#   http://127.0.0.1:3000/             Marketing landing
+#   http://127.0.0.1:3000/admin/       Operator console
+#   http://127.0.0.1:3000/demo         Voice agent demo (magic link)
+#   http://127.0.0.1:8025/           Mailpit (local demo emails)
+#   http://127.0.0.1:3000/swagger-ui API docs
+#   http://127.0.0.1:8080/           Temporal UI
+#   http://127.0.0.1:9001/           MinIO console
+
+name: avip-platform
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: postgres
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    volumes:
+      - ../temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000,http://localhost:8080
+    ports:
+      - "8080:8080"
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  platform-api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        MODULE: platform-api
+    env_file:
+      - ../../.env
+    environment:
+      PORT: "3000"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/avip
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      TEMPORAL_ADDRESS: temporal:7233
+      APP_URL: http://127.0.0.1:5173
+      MINIO_ENDPOINT: http://minio:9000
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      minio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 90s
+    volumes:
+      - ../../data/demo-transcripts:/app/data/demo-transcripts
+    restart: unless-stopped
+
+  platform-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        MODULE: platform-worker
+    env_file:
+      - ../../.env
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/avip
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      TEMPORAL_ADDRESS: temporal:7233
+      MINIO_ENDPOINT: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      platform-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

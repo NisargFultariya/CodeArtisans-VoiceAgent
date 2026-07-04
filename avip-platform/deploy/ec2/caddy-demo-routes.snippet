@@ -1,0 +1,26 @@
+# Add inside the {$STAGING_PUBLIC_HOST} block in avip/deploy/ec2/Caddyfile.ip-only
+# BEFORE the final `handle { reverse_proxy marketing:4321 }` catch-all.
+#
+# Routes Soniqa Kotlin demo (platform-api on host port 13001) while keeping Go API paths.
+
+	handle /health* {
+		reverse_proxy api:3000
+	}
+	handle /demo* {
+		reverse_proxy host.docker.internal:13001
+	}
+	handle /request-demo* {
+		reverse_proxy host.docker.internal:13001
+	}
+	handle /assets/* {
+		reverse_proxy host.docker.internal:13001
+	}
+	handle /admin* {
+		reverse_proxy host.docker.internal:13001
+	}
+	handle /openapi.json {
+		reverse_proxy host.docker.internal:13001
+	}
+	handle /swagger-ui* {
+		reverse_proxy host.docker.internal:13001
+	}

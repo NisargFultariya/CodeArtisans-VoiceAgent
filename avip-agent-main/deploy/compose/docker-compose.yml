@@ -1,0 +1,22 @@
+# avip-agent — LiveKit voice worker (single service)
+#
+# From repo root:
+#   cp .env.example .env
+#   task up
+#
+# Requires a running avip-platform API (AVIP_API_URL) and LiveKit Cloud credentials.
+
+name: avip-agent
+
+services:
+  agent:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env
+    environment:
+      AVIP_API_URL: ${AVIP_API_URL:-http://host.docker.internal:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

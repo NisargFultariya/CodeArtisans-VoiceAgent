@@ -1,0 +1,74 @@
+version: "3"
+
+vars:
+  COMPOSE: docker compose -f deploy/compose/docker-compose.yml
+  PYTHON: .venv/bin/python
+  PYTEST: .venv/bin/pytest
+
+tasks:
+  default:
+    desc: List tasks
+    cmds:
+      - task --list
+
+  check-env:
+    desc: Ensure .env exists
+    cmds:
+      - test -f .env || (echo "Missing .env — run cp .env.example .env" >&2 && exit 1)
+
+  install:
+    desc: Create venv and install package
+    cmds:
+      - python3 -m venv .venv
+      - .venv/bin/pip install -e ".[dev]"
+
+  download-files:
+    desc: Download Silero VAD models
+    deps: [install, check-env]
+    dotenv: [".env"]
+    cmds:
+      - "{{.PYTHON}} agent.py download-files"
+
+  up:
+    desc: Run agent in Docker
+    deps: [check-env]
+    cmds:
+      - "{{.COMPOSE}} up -d --build"
+
+  down:
+    desc: Stop agent container
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  logs:
+    desc: Follow agent logs
+    cmds:
+      - "{{.COMPOSE}} logs -f agent"
+
+  dev:
+    desc: Run LiveKit worker on host
+    deps: [check-env]
+    dotenv: [".env"]
+    preconditions:
+      - sh: test -x {{.PYTHON}}
+        msg: run task install first
+    cmds:
+      - "{{.PYTHON}} agent.py dev"
+
+  test:
+    desc: Unit tests
+    preconditions:
+      - sh: test -x {{.PYTEST}}
+        msg: run task install first
+    cmds:
+      - "{{.PYTEST}} -m unit -q"
+
+  test-integration:
+    desc: Integration tests (AVIP_SMOKE_FULL=1 for full simulate-rto)
+    deps: [check-env]
+    dotenv: [".env"]
+    preconditions:
+      - sh: test -x {{.PYTEST}}
+        msg: run task install first
+    cmds:
+      - "{{.PYTEST}} -m integration -q"

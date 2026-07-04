@@ -1,0 +1,88 @@
+server:
+  port: ${PORT:3000}
+
+spring:
+  application:
+    name: avip-platform-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/avip}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  api-docs:
+    path: /openapi.json
+  swagger-ui:
+    path: /swagger-ui
+
+avip:
+  internal-secret: ${AVIP_INTERNAL_SIGNAL_SECRET:dev-internal-secret-change-me}
+  app-url: ${APP_URL:}
+  token-encryption-key: ${TOKEN_ENCRYPTION_KEY:${SHOPIFY_API_SECRET:}}
+  default-language: ${DEFAULT_LANGUAGE:hi-IN}
+  shopify-api-version: ${SHOPIFY_API_VERSION:2024-10}
+  simulation-enabled: ${SIMULATION_MODE_ENABLED:${AVIP_SIMULATION_ENABLED:true}}
+  dev-shop-domain: ${AVIP_DEV_STORE:${SHOPIFY_SHOP_DOMAIN:avip-store-ioj9xku3.myshopify.com}}
+  temporal:
+    address: ${TEMPORAL_ADDRESS:localhost:7233}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+    task-queue: ${TEMPORAL_TASK_QUEUE:avip-main}
+  livekit:
+    url: ${LIVEKIT_URL:}
+    api-url: ${LIVEKIT_API_URL:}
+    api-key: ${LIVEKIT_API_KEY:}
+    api-secret: ${LIVEKIT_API_SECRET:}
+    agent-name: ${LIVEKIT_AGENT_NAME:avip-recovery-agent}
+    sip-outbound-trunk-id: ${LIVEKIT_SIP_OUTBOUND_TRUNK_ID:}
+    sip-wait-until-answered: ${LIVEKIT_SIP_WAIT_UNTIL_ANSWERED:false}
+  sarvam:
+    api-key: ${SARVAM_API_KEY:}
+    tts-speaker: ${SARVAM_TTS_SPEAKER:priya}
+  telephony:
+    provider: ${TELEPHONY_PROVIDER:vobiz}
+  storage:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minio}
+    secret-key: ${MINIO_SECRET_KEY:minio123}
+    bucket: ${MINIO_BUCKET:avip-recordings}
+    region: ${MINIO_REGION:us-east-1}
+  admin:
+    username: ${AVIP_ADMIN_USERNAME:admin}
+    password: ${AVIP_ADMIN_PASSWORD:admin}
+    session-secret: ${AVIP_ADMIN_SESSION_SECRET:${AVIP_INTERNAL_SIGNAL_SECRET:dev-internal-secret-change-me}}
+    session-ttl-hours: ${AVIP_ADMIN_SESSION_TTL_HOURS:24}
+  voice-demo:
+    gate-enabled: ${AVIP_VOICE_DEMO_GATE_ENABLED:true}
+    token-ttl-hours: ${AVIP_VOICE_DEMO_TOKEN_TTL_HOURS:72}
+    token-secret: ${AVIP_VOICE_DEMO_TOKEN_SECRET:${AVIP_ADMIN_SESSION_SECRET:${AVIP_INTERNAL_SIGNAL_SECRET:dev-internal-secret-change-me}}}
+    transcript-log-enabled: ${AVIP_DEMO_TRANSCRIPT_LOG_ENABLED:true}
+    transcript-log-dir: ${AVIP_DEMO_TRANSCRIPT_LOG_DIR:data/demo-transcripts}
+  portal:
+    login-token-ttl-minutes: ${AVIP_PORTAL_LOGIN_TOKEN_TTL_MINUTES:30}
+    session-ttl-hours: ${AVIP_PORTAL_SESSION_TTL_HOURS:168}
+    session-secret: ${AVIP_PORTAL_SESSION_SECRET:${AVIP_ADMIN_SESSION_SECRET:${AVIP_INTERNAL_SIGNAL_SECRET:dev-internal-secret-change-me}}}
+  mail:
+    enabled: ${AVIP_MAIL_ENABLED:true}
+    from: ${AVIP_MAIL_FROM:AVIP <noreply@avip.local>}
+
+logging:
+  level:
+    com.vedanova.platform: INFO

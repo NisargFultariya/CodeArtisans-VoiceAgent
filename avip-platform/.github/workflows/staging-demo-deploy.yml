@@ -1,0 +1,51 @@
+# Deploy Soniqa voice demo to staging EC2 (Kotlin platform + Python agent).
+#
+# Secrets (repo Settings → Secrets): STAGING_HOST, STAGING_SSH_KEY, STAGING_SSH_USER
+# Same as avip Go staging deploy.
+#
+# Manual: Actions → Staging demo deploy → Run workflow
+
+name: Staging demo deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Git branch to deploy
+        required: false
+        default: main
+
+concurrency:
+  group: staging-demo-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy deploy script to EC2
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER || 'ec2-user' }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: scripts/staging-demo/deploy-on-host.sh
+          target: /tmp/staging-demo/
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER || 'ec2-user' }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          timeout: 60s
+          command_timeout: 40m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            BRANCH="${{ github.event.inputs.branch || 'main' }}"
+            bash /tmp/staging-demo/deploy-on-host.sh "$BRANCH"

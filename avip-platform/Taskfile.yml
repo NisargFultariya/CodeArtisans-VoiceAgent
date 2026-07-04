@@ -1,0 +1,150 @@
+version: "3"
+
+vars:
+  COMPOSE: docker compose -f deploy/compose/docker-compose.yml
+  INFRA: postgres temporal temporal-ui minio mailpit
+  APPS: platform-api platform-worker
+
+tasks:
+  default:
+    desc: List tasks
+    cmds:
+      - task --list
+
+  check-env:
+    desc: Ensure .env exists
+    cmds:
+      - test -f .env || (echo "Missing .env — run cp .env.example .env" >&2 && exit 1)
+
+  build:
+    desc: Gradle build (includes platform-web admin UI)
+    cmds:
+      - ./gradlew build
+
+  web:install:
+    desc: Install platform-web npm dependencies
+    dir: platform-web
+    cmds:
+      - npm install
+
+  web:dev:
+    desc: Run platform-web Vite dev server (proxies /admin/api and /api/marketing to :3000)
+    dir: platform-web
+    cmds:
+      - npm run dev
+
+  dev:
+    desc: Start full local dev stack (infra + rebuilt API + Vite on :5173)
+    cmds:
+      - bash scripts/dev.sh
+
+  dev:backend:
+    desc: Rebuild and restart API containers only (keeps Vite as-is)
+    deps: [check-env]
+    cmds:
+      - "{{.COMPOSE}} up -d {{.INFRA}}"
+      - task: ensure-db
+      - "{{.COMPOSE}} up -d --build {{.APPS}}"
+      - task: wait-api
+
+  sync-secrets:
+    desc: Copy LiveKit/Sarvam keys from ../avip/.env into platform/.env and agent/.env
+    cmds:
+      - bash scripts/sync-env-from-avip.sh
+
+  web:build:
+    desc: Build platform-web and copy into platform-api static resources
+    cmds:
+      - ./gradlew :platform-api:copyPlatformWeb
+
+  test:
+    desc: Gradle test
+    cmds:
+      - ./gradlew test
+
+  bootRun:
+    desc: Run API on host (needs Postgres/Temporal)
+    cmds:
+      - ./gradlew :platform-api:bootRun
+
+  workerRun:
+    desc: Run Temporal worker on host
+    cmds:
+      - ./gradlew :platform-worker:bootRun
+
+  up:
+    desc: Start Postgres, Temporal, MinIO, platform-api, platform-worker
+    deps: [check-env]
+    cmds:
+      - "{{.COMPOSE}} up -d {{.INFRA}}"
+      - task: wait-infra
+      - task: ensure-db
+      - "{{.COMPOSE}} up -d --build {{.APPS}}"
+      - task: wait-api
+      - task: status
+
+  down:
+    desc: Stop and remove containers
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  stop:
+    desc: Stop app containers only
+    cmds:
+      - "{{.COMPOSE}} stop {{.APPS}}"
+
+  restart:
+    desc: down then up
+    cmds:
+      - task: down
+      - task: up
+
+  status:
+    desc: docker compose ps
+    cmds:
+      - "{{.COMPOSE}} ps"
+
+  logs:
+    desc: Follow app logs
+    cmds:
+      - "{{.COMPOSE}} logs -f {{.APPS}}"
+
+  wait-infra:
+    internal: true
+    cmds:
+      - |
+        echo "Waiting for Postgres..."
+        i=0
+        until {{.COMPOSE}} exec -T postgres pg_isready -U postgres >/dev/null 2>&1; do
+          i=$((i+1))
+          if [ "$i" -ge 60 ]; then echo "timeout: postgres" >&2; exit 1; fi
+          sleep 1
+        done
+        echo "Waiting for Temporal UI (localhost:8080)..."
+        i=0
+        until curl -sf http://localhost:8080 >/dev/null 2>&1; do
+          i=$((i+1))
+          if [ "$i" -ge 120 ]; then echo "timeout: temporal" >&2; exit 1; fi
+          sleep 1
+        done
+
+  wait-api:
+    internal: true
+    cmds:
+      - |
+        echo "Waiting for platform-api /health..."
+        i=0
+        until curl -sf http://127.0.0.1:3000/health >/dev/null 2>&1; do
+          i=$((i+1))
+          if [ "$i" -ge 90 ]; then echo "timeout: platform-api" >&2; exit 1; fi
+          sleep 2
+        done
+        echo "Platform ready — http://127.0.0.1:3000/"
+
+  ensure-db:
+    internal: true
+    cmds:
+      - |
+        {{.COMPOSE}} exec -T postgres psql -U postgres -tc \
+          "SELECT 1 FROM pg_database WHERE datname = 'avip'" | grep -q 1 \
+          || {{.COMPOSE}} exec -T postgres psql -U postgres -c "CREATE DATABASE avip"

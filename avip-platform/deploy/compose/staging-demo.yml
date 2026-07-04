@@ -1,0 +1,60 @@
+# Minimal Soniqa voice demo for staging (HTTPS via host Caddy — see deploy/STAGING_DEMO.md).
+#
+# From platform repo root on EC2:
+#   cp .env.staging-demo.example .env.staging-demo
+#   docker compose -f deploy/compose/staging-demo.yml --env-file .env.staging-demo up -d --build
+#
+# Binds platform-api on 127.0.0.1:13001 only — Caddy on the host proxies public HTTPS → here.
+
+name: avip-staging-demo
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - staging_demo_pg:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  platform-api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        MODULE: platform-api
+    env_file:
+      - ../../.env.staging-demo
+    environment:
+      PORT: "3000"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/avip
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      APP_URL: ${APP_URL:?set APP_URL to public https demo URL}
+      AVIP_MAIL_ENABLED: ${AVIP_MAIL_ENABLED:-true}
+    ports:
+      # Bind on all host interfaces so Caddy (docker) can reach via 172.17.0.1:13001
+      - "13001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 120s
+    volumes:
+      - staging_demo_transcripts:/app/data/demo-transcripts
+    restart: unless-stopped
+
+volumes:
+  staging_demo_pg:
+  staging_demo_transcripts:

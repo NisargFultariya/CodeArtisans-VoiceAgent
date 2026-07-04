@@ -1,0 +1,14 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+out/
+bin/
+.DS_Store
+.env
+.env.local
+data/demo-transcripts/
+platform-web/node_modules/
+platform-web/dist/
+platform-api/src/main/resources/static/admin/
