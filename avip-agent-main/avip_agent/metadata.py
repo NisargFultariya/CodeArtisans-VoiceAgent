@@ -17,6 +17,9 @@ class JobMetadata:
     language: str = "hi-IN"
     objective: str = ""
     scenario: str = ""
+    agent_name: str = ""
+    custom_data: dict[str, Any] = None
+
 
     @property
     def is_demo(self) -> bool:
@@ -68,6 +71,8 @@ def parse_job_metadata(raw: str, default_language: str = "hi-IN") -> JobMetadata
         meta.language = lang
     meta.objective = _str(payload.get("objective"))
     meta.scenario = _str(payload.get("scenario"))
+    meta.agent_name = _str(payload.get("agentName")) or "Meera"
+    meta.custom_data = payload.get("customData") or {}
     return meta
 
 

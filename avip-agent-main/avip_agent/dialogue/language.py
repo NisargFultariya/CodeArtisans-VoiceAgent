@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 SUPPORTED_DEMO_LANGS = {
+    "en-IN": "English",
     "hi-IN": "Hindi",
     "gu-IN": "Gujarati",
     "ta-IN": "Tamil",
@@ -62,9 +63,22 @@ RESCHEDULE_HINTS = (
 
 
 def normalize_demo_lang(lang: str) -> str:
-    lang = lang.strip()
-    if lang in SUPPORTED_DEMO_LANGS:
-        return lang
+    lang = lang.strip().lower()
+    if "english" in lang or lang.startswith("en-") or lang == "en":
+        return "en-IN"
+    if "hindi" in lang:
+        return "hi-IN"
+    if "gujarati" in lang:
+        return "gu-IN"
+    if "tamil" in lang:
+        return "ta-IN"
+    if "telugu" in lang:
+        return "te-IN"
+    if "marathi" in lang:
+        return "mr-IN"
+    for code in SUPPORTED_DEMO_LANGS:
+        if code.lower() == lang:
+            return code
     return DEFAULT_DEMO_LANG
 
 

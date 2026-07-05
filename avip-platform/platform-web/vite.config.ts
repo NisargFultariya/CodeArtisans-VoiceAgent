@@ -21,7 +21,7 @@ export default defineConfig({
       "/admin/api": { target: apiTarget, changeOrigin: true },
       "/portal/api": { target: apiTarget, changeOrigin: true },
       "/portal/grant-access": { target: apiTarget, changeOrigin: true },
-      "/api/marketing": { target: apiTarget, changeOrigin: true },
+      "/api": { target: apiTarget, changeOrigin: true },
       "/health": { target: apiTarget, changeOrigin: true },
       "/demo/grant-access": { target: apiTarget, changeOrigin: true },
       "/demo/access-status": { target: apiTarget, changeOrigin: true },

@@ -23,6 +23,10 @@ class SpaController {
         "/portal",
         "/portal/",
         "/portal/login",
+        "/login",
+        "/signup",
+        "/app",
+        "/app/{*path}"
     )
     fun spa(): String = "forward:/index.html"
 }

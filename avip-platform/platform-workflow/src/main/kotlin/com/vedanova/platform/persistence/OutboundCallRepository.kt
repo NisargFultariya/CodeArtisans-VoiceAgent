@@ -4,7 +4,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
 import java.time.Instant
-import java.util.UUID
 
 @Repository
 class OutboundCallRepository(
@@ -17,14 +16,20 @@ class OutboundCallRepository(
         language: String,
         voice: String,
         mode: String,
-        status: String
+        status: String,
+        customerName: String? = null,
+        systemPrompt: String? = null,
+        customData: String? = null,
+        agentName: String? = null,
     ) {
         jdbc.update(
             """
             INSERT INTO outbound_calls (
-                id, phone_number, scenario, language, voice, mode, status, started_at, created_at, updated_at
+                id, phone_number, scenario, language, voice, mode, status, started_at, created_at, updated_at,
+                customer_name, system_prompt, custom_data, agent_name
             ) VALUES (
-                :id, :phoneNumber, :scenario, :language, :voice, :mode, :status, NOW(), NOW(), NOW()
+                :id, :phoneNumber, :scenario, :language, :voice, :mode, :status, NOW(), NOW(), NOW(),
+                :customerName, :systemPrompt, :customData::jsonb, :agentName
             )
             """.trimIndent(),
             MapSqlParameterSource()
@@ -35,6 +40,10 @@ class OutboundCallRepository(
                 .addValue("voice", voice)
                 .addValue("mode", mode)
                 .addValue("status", status)
+                .addValue("customerName", customerName)
+                .addValue("systemPrompt", systemPrompt)
+                .addValue("customData", customData)
+                .addValue("agentName", agentName)
         )
     }
 
@@ -134,7 +143,10 @@ class OutboundCallRepository(
                 livekitRoom = rs.getString("livekit_room"),
                 transcript = rs.getString("transcript"),
                 summary = rs.getString("summary"),
-                outcome = rs.getString("outcome")
+                outcome = rs.getString("outcome"),
+                customerName = rs.getString("customer_name"),
+                systemPrompt = rs.getString("system_prompt"),
+                customData = rs.getString("custom_data")
             )
         }.firstOrNull()
     }
@@ -166,7 +178,10 @@ class OutboundCallRepository(
                 livekitRoom = rs.getString("livekit_room"),
                 transcript = rs.getString("transcript"),
                 summary = rs.getString("summary"),
-                outcome = rs.getString("outcome")
+                outcome = rs.getString("outcome"),
+                customerName = rs.getString("customer_name"),
+                systemPrompt = rs.getString("system_prompt"),
+                customData = rs.getString("custom_data")
             )
         }
     }
@@ -193,5 +208,8 @@ data class OutboundCallRow(
     val livekitRoom: String?,
     val transcript: String?,
     val summary: String?,
-    val outcome: String?
+    val outcome: String?,
+    val customerName: String? = null,
+    val systemPrompt: String? = null,
+    val customData: String? = null
 )

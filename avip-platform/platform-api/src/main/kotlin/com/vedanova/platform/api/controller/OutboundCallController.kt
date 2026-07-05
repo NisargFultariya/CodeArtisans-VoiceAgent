@@ -17,6 +17,7 @@ import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import org.springframework.web.server.ResponseStatusException
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -29,6 +30,7 @@ class OutboundCallController(
     private val callStatusPublisher: CallStatusPublisher,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
+    private val objectMapper = ObjectMapper().findAndRegisterModules()
     @PostMapping
     fun createCall(@RequestBody body: CreateOutboundCallRequest): CreateOutboundCallResponse {
         val mode = body.mode.trim().lowercase().ifBlank { "phone" }
@@ -41,6 +43,14 @@ class OutboundCallController(
         val isScheduled = (body.delayMinutes != null && body.delayMinutes > 0) || body.scheduledTimeEpochMs != null
         val initialStatus = if (isScheduled) "SCHEDULED" else "CALLING"
 
+        val customDataStr = body.customData?.let { 
+            try {
+                objectMapper.writeValueAsString(it)
+            } catch (e: Exception) {
+                "{}"
+            }
+        } ?: "{}"
+
         // 1. Persist call metadata in DB
         outboundCallRepository.create(
             id = callId,
@@ -49,7 +59,10 @@ class OutboundCallController(
             language = body.language.trim(),
             voice = body.voice.trim(),
             mode = mode,
-            status = initialStatus
+            status = initialStatus,
+            customerName = body.customerName?.trim(),
+            systemPrompt = body.systemPrompt?.trim(),
+            customData = customDataStr
         )
 
         if (isScheduled) {
@@ -67,7 +80,10 @@ class OutboundCallController(
             voice = body.voice.trim(),
             mode = mode,
             delayMinutes = body.delayMinutes,
-            scheduledTimeEpochMs = body.scheduledTimeEpochMs
+            scheduledTimeEpochMs = body.scheduledTimeEpochMs,
+            customerName = body.customerName?.trim(),
+            systemPrompt = body.systemPrompt?.trim(),
+            customData = body.customData
         )
 
         val options = WorkflowOptions.newBuilder()
@@ -156,7 +172,10 @@ data class CreateOutboundCallRequest(
     val voice: String,
     val mode: String = "phone",
     val delayMinutes: Int? = null,
-    val scheduledTimeEpochMs: Long? = null
+    val scheduledTimeEpochMs: Long? = null,
+    val customerName: String? = null,
+    val systemPrompt: String? = null,
+    val customData: Map<String, Any>? = null,
 )
 
 data class CreateOutboundCallResponse(

@@ -116,6 +116,14 @@ services:
     volumes:
       - ../../data/demo-transcripts:/app/data/demo-transcripts
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ../../platform-api/src
+        - action: rebuild
+          path: ../../platform-workflow/src
+        - action: rebuild
+          path: ../../platform-marketing/src
 
   platform-worker:
     build:
@@ -139,6 +147,12 @@ services:
       platform-api:
         condition: service_healthy
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ../../platform-worker/src
+        - action: rebuild
+          path: ../../platform-workflow/src
 
 volumes:
   pgdata:

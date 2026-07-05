@@ -215,10 +215,24 @@ async def speak_pstn_greeting(
     is_recruitment = (meta.scenario or "").strip().lower() in ("recruitment", "hr", "screening")
     if is_recruitment:
         candidate_name = meta.customer_name or "Saurabh"
-        if meta.language.startswith("hi"):
-            greeting = f"नमस्ते, क्या मैं {candidate_name} से बात कर सकती हूँ?"
+        if meta.system_prompt and meta.system_prompt.strip():
+            greeting_prompt = (
+                f"Generate the initial greeting to open the call with candidate '{candidate_name}' "
+                f"according to the OPENING instructions in your system prompt. Do not write any JSON, "
+                f"respond only with the conversational line to say."
+            )
+            try:
+                clean_system = get_recruitment_system_prompt(meta)
+                greeting = await llm.chat(clean_system, greeting_prompt)
+                greeting = greeting.strip().strip('"\'')
+            except Exception as exc:
+                logger.warning("[agent] recruitment LLM greeting failed: %s", exc)
+                greeting = f"Hi, may I speak with {candidate_name}?"
         else:
-            greeting = f"Hi, may I speak with {candidate_name}?"
+            if meta.language.startswith("hi"):
+                greeting = f"नमस्ते, क्या मैं {candidate_name} से बात कर सकती हूँ?"
+            else:
+                greeting = f"Hi, may I speak with {candidate_name}?"
         await say(session, with_trai_disclosure(greeting, meta.language))
         return greeting
 

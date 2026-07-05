@@ -81,7 +81,9 @@ class OutboundCallActivitiesImpl(
         val roomClient = RoomServiceClient.createClient(apiUrl, lk.apiKey, lk.apiSecret)
         val dispatchClient = AgentDispatchServiceClient.createClient(apiUrl, lk.apiKey, lk.apiSecret)
 
-        val metaMap = mapOf(
+        val callRow = outboundCallRepository.get(callId)
+
+        val metaMap = mutableMapOf<String, Any>(
             "source" to "outbound-call",
             "simulationMode" to false,
             "language" to language,
@@ -90,6 +92,18 @@ class OutboundCallActivitiesImpl(
             "callId" to callId,
             "workflowId" to workflowId
         )
+
+        callRow?.customerName?.let { metaMap["customerName"] = it }
+        callRow?.systemPrompt?.let { metaMap["systemPrompt"] = it }
+        callRow?.customData?.let { str ->
+            try {
+                val parsed = objectMapper.readValue(str, Map::class.java)
+                metaMap["customData"] = parsed
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         val metaJson = objectMapper.writeValueAsString(metaMap)
 
         try {

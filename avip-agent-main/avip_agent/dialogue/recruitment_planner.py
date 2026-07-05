@@ -10,6 +10,15 @@ logger = logging.getLogger(__name__)
 
 def get_recruitment_system_prompt(meta: JobMetadata) -> str:
     candidate_name = meta.customer_name or "Saurabh"
+    if meta.system_prompt and meta.system_prompt.strip():
+        prompt = meta.system_prompt
+        prompt = prompt.replace("[[customer_name]]", candidate_name)
+        prompt = prompt.replace("[[candidate_name]]", candidate_name)
+        if meta.custom_data:
+            for k, v in meta.custom_data.items():
+                prompt = prompt.replace(f"[[{k}]]", str(v))
+        return prompt
+
     company_name = "Vedanova Solutions"
     job_title = "React & TypeScript Engineer"
     language = meta.language or "hi-IN"
@@ -38,6 +47,13 @@ Job Title: {job_title}
 
 {lang_instruction}
 
+# IMPORTANT: Handling STT Transcription Errors
+The speech-to-text system may occasionally produce garbled, phonetic, or broken text (e.g. "Mayor speak", "haan ji", "theek hai", mixed scripts). 
+- NEVER end the call because of garbled or unclear text.
+- Try to interpret the candidate's intent from context. If unclear, politely ask them to repeat.
+- Do NOT trigger LANGUAGE_CALLBACK based on garbled transcription.
+- Only use LANGUAGE_CALLBACK if the candidate EXPLICITLY and CLEARLY asks to speak in a completely different language (e.g. "Please call me in Tamil" or "Can we speak in Gujarati?").
+
 # Objectives
 1. Confirm you are speaking with the correct candidate ({candidate_name}).
 2. Check whether it is a convenient time to talk. If they are busy or not available, you must immediately stop the screening process, ask for their callback availability, ask if they have any quick questions about the role or process, and conclude.
@@ -52,6 +68,7 @@ Job Title: {job_title}
 - Do NOT sound scripted. Keep responses short and conversational.
 - Ask only one question at a time.
 - Allow candidates to speak naturally. Never interrupt.
+- If a response seems unclear or garbled, simply say: "Sorry, I didn't catch that clearly. Could you repeat that?"
 
 # Conversation States & Outcomes
 1. **Wrong Person**: If not speaking with the candidate, say: "Sorry for the inconvenience. Thank you for your time."
@@ -64,9 +81,10 @@ Job Title: {job_title}
 3. **No Longer Interested**: If candidate is not interested or wants to withdraw:
    Say: "Thank you for letting me know. I appreciate your time. I'll update your application accordingly. Have a wonderful day."
    Output call outcome as WITHDRAWN and set ready_to_close = true.
-4. **Another Language**: If they request another language (e.g. Hindi, Tamil, etc.) that you are not speaking in:
+4. **Different Language Request**: ONLY if the candidate explicitly and clearly asks to be called in a completely different language (e.g. Tamil, Gujarati, Marathi):
    Say: "Certainly. We can arrange another call in your preferred language. Which language would you prefer?"
    Output call outcome as LANGUAGE_CALLBACK and set ready_to_close = true.
+   DO NOT use this outcome for Hindi/Hinglish responses, garbled text, or any unclear utterance.
 5. **Screening Completed**: Once you have gone through the questions (experience, current role, skills, notice period, location/relocation, compensation, availability, candidate questions):
    Say: "Thank you for taking the time to speak with me today. Our recruitment team will review your information and contact you regarding the next steps. Have a great day."
    Output call outcome as SCREENING_COMPLETED and set ready_to_close = true.
@@ -105,21 +123,35 @@ async def plan_recruitment_turn(
     """
     system_prompt = get_recruitment_system_prompt(meta)
 
+    # Ensure JSON formatting instructions are always appended if not present
+    if "JSON" not in system_prompt or "Response JSON structure" not in system_prompt:
+        system_prompt += "\n\n" + """# Output Format
+You MUST respond in JSON format ONLY. Do not wrap your response in markdown code blocks.
+Response JSON structure:
+{
+  "reply": "your conversational response to the candidate",
+  "ready_to_close": true/false,
+  "outcome": "SCREENING_COMPLETED" | "CALLBACK_REQUESTED" | "WRONG_NUMBER" | "WITHDRAWN" | "LANGUAGE_CALLBACK" | null,
+  "callback_time": "date/time string if outcome is CALLBACK_REQUESTED, otherwise null"
+}"""
+
     # Format transcript
     transcript_lines = []
+    agent_name = meta.agent_name or "Meera"
     for msg in chat_history:
-        role = "Meera" if msg["role"] == "assistant" else "Candidate"
+        role = agent_name if msg["role"] == "assistant" else "Candidate"
         transcript_lines.append(f"{role}: {msg['content']}")
     transcript_str = "\n".join(transcript_lines)
 
     user_prompt = (
         f"Conversation history:\n{transcript_str}\n\n"
-        "Generate the next response from Meera in JSON format."
+        f"Generate the next response from {agent_name} in JSON format."
     )
 
     try:
         raw_response = await llm.chat(system_prompt, user_prompt)
         raw_response = raw_response.strip()
+        logger.info("[agent] OpenRouter raw response: %r", raw_response)
         
         # Strip markdown json code blocks if present
         raw_response = re.sub(r"^```(?:json)?", "", raw_response).strip()
@@ -136,9 +168,10 @@ async def plan_recruitment_turn(
         if callback_time:
             callback_time = str(callback_time).strip()
 
+        logger.info("[agent] Parsed response reply=%r ready_to_close=%s outcome=%s", reply, ready_to_close, outcome)
         return reply, ready_to_close, outcome, callback_time
     except Exception as exc:
-        logger.error("Error in plan_recruitment_turn: %s. Falling back to plain LLM.", exc)
+        logger.error("[agent] Error in plan_recruitment_turn: %s. Falling back to plain LLM. raw_response was: %r", exc, raw_response if 'raw_response' in locals() else None)
         # Fallback to plain text chat if JSON parsing fails
         try:
             raw_text = await llm.chat(
@@ -176,8 +209,9 @@ async def extract_recruitment_details(
     matching the ATS/CRM expectations of the platform.
     """
     transcript_lines = []
+    agent_name = meta.agent_name or "Meera"
     for msg in chat_history:
-        role = "Meera" if msg["role"] == "assistant" else "Candidate"
+        role = agent_name if msg["role"] == "assistant" else "Candidate"
         transcript_lines.append(f"{role}: {msg['content']}")
     transcript_str = "\n".join(transcript_lines)
 

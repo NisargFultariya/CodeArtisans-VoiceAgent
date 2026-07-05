@@ -13,9 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 async def say(session: AgentSession, text: str) -> None:
-    logger.info("[agent] saying: %r", text)
-    handle = session.say(text, add_to_chat_ctx=False)
-    await handle.wait_for_playout()
+    try:
+        logger.info("[agent] saying: %r", text)
+        handle = session.say(text, add_to_chat_ctx=False)
+        await handle.wait_for_playout()
+    except Exception as exc:
+        logger.warning("[agent] failed to say %r: %s", text, exc)
 
 
 async def finalize_pstn_reason(
