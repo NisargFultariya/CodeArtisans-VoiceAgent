@@ -1,5 +1,5 @@
 import React from 'react';
-import { PhoneOutgoing, PhoneIncoming, BarChart3, KeyRound, Plus, Bot, TrendingUp, PhoneCall, Target, DollarSign, Sparkles } from 'lucide-react';
+import { PhoneOutgoing, PhoneIncoming, BarChart3, Plus, Bot, TrendingUp, PhoneCall, Target, DollarSign, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MiniWave } from '../../ui/MiniWave';
 import { Badge } from '../../ui/Badge';
@@ -111,14 +111,13 @@ export const OverviewScreen: React.FC = () => {
         <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <h3 style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 4 }}>Quick Actions</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>Deploy new agents or access developer keys instantly</p>
+            <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>Deploy new agents or access metrics instantly</p>
           </div>
           <div className="ov-actions-grid">
             {[
               { label: 'New Outbound', sub: 'Dial leads & lists', Icon: PhoneOutgoing, action: () => navigate('/app/create') },
               { label: 'New Inbound', sub: '24/7 support line', Icon: PhoneIncoming, action: () => navigate('/app/create') },
               { label: 'Analytics', sub: 'Review KPIs', Icon: BarChart3, action: () => navigate('/app/analytics') },
-              { label: 'API Keys', sub: 'Get token pool', Icon: KeyRound, action: () => navigate('/app/sdk') },
             ].map(({ label, sub, Icon, action }) => (
               <button key={label} className="ov-action-card" onClick={action}>
                 <div className="icon-wrap">

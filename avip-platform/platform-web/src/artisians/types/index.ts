@@ -70,7 +70,7 @@ export interface WizardState {
 }
 
 export type RootView = 'landing' | 'auth' | 'app';
-export type AppScreen = 'overview' | 'create' | 'agents' | 'analytics' | 'sdk' | 'settings';
+export type AppScreen = 'overview' | 'create' | 'agents' | 'analytics' | 'settings';
 export type AgentViewMode = 'table' | 'grid';
 export type AuthMode = 'login' | 'signup';
 export type SettingsTab = 'Branding' | 'Notifications' | 'API Keys';

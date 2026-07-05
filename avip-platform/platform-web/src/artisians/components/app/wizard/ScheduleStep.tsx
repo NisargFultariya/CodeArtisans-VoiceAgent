@@ -1,21 +1,9 @@
 import React from 'react';
 import { useApp } from '../../../context/AppContext';
-import type { WizardData } from '../../../types';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-interface TriggerOption {
-  val: WizardData['triggerType'];
-  label: string;
-  desc: string;
-}
 
-const triggerOptions: TriggerOption[] = [
-  { val: 'immediate', label: 'Start immediately', desc: 'Calling begins as soon as you launch the campaign.' },
-  { val: 'scheduled', label: 'Schedule for a date & time', desc: 'Pick an exact date and time to begin calling.' },
-  { val: 'recurring', label: 'Recurring', desc: 'Repeat the campaign automatically on the days you selected above.' },
-  { val: 'event', label: 'Event-based', desc: 'Start when a condition is met — e.g. a field from your CSV, or a webhook.' },
-];
 
 export const ScheduleStep: React.FC = () => {
   const { wizard, updateWizardData } = useApp();
@@ -65,35 +53,7 @@ export const ScheduleStep: React.FC = () => {
         </div>
       </div>
 
-      <h3 style={{ fontSize: 15, fontWeight: 700, margin: '24px 0 16px' }}>Trigger logic</h3>
-      <div role="radiogroup" aria-label="Trigger logic">
-        {triggerOptions.map(opt => (
-          <label key={opt.val} className={`wiz-trigger-option ${data.triggerType === opt.val ? 'selected' : ''}`} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-            <input type="radio" name="trig" checked={data.triggerType === opt.val} onChange={() => updateWizardData('triggerType', opt.val)} style={{ marginTop: 4, accentColor: 'var(--accent)' }} />
-            <div style={{ flex: 1 }}>
-              <b style={{ fontSize: 13.5, display: 'block', marginBottom: 3, color: 'var(--text)' }}>{opt.label}</b>
-              <span style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.4, display: 'block' }}>{opt.desc}</span>
-            </div>
-          </label>
-        ))}
-      </div>
 
-      {data.triggerType === 'scheduled' && (
-        <div className="field" style={{ marginTop: 16 }}>
-          <label className="field-label" htmlFor="wSchedDate">Launch date & time</label>
-          <input className="input" type="datetime-local" id="wSchedDate" style={{ maxWidth: 280 }} onChange={e => updateWizardData('triggerDate', e.target.value)} />
-        </div>
-      )}
-      {data.triggerType === 'event' && (
-        <div className="field" style={{ marginTop: 16 }}>
-          <label className="field-label" htmlFor="wEventRule">Event rule</label>
-          <select className="input select-field" id="wEventRule" style={{ maxWidth: 400 }} onChange={e => updateWizardData('eventRule', e.target.value)}>
-            <option>3 days before due_date (from CSV)</option>
-            <option>On new row added to CSV</option>
-            <option>On webhook received</option>
-          </select>
-        </div>
-      )}
     </div>
   );
 };

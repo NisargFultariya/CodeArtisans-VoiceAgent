@@ -28,7 +28,6 @@ import { OverviewScreen } from "@/artisians/components/app/screens/OverviewScree
 import { CreateAgentScreen } from "@/artisians/components/app/screens/CreateAgentScreen";
 import { MyAgentsScreen } from "@/artisians/components/app/screens/MyAgentsScreen";
 import { AnalyticsScreen } from "@/artisians/components/app/screens/AnalyticsScreen";
-import { SdkScreen } from "@/artisians/components/app/screens/SdkScreen";
 import { CampaignLaunchScreen } from "@/artisians/components/app/screens/CampaignLaunchScreen";
 import { CampaignAnalyticsScreen } from "@/artisians/components/app/screens/CampaignAnalyticsScreen";
 
@@ -50,7 +49,6 @@ export default function App() {
               <Route path="create" element={<CreateAgentScreen />} />
               <Route path="agents" element={<MyAgentsScreen />} />
               <Route path="analytics" element={<AnalyticsScreen />} />
-              <Route path="sdk" element={<SdkScreen />} />
               <Route path="campaign/:agentId" element={<CampaignLaunchScreen />} />
               <Route path="campaign-analytics/:agentId" element={<CampaignAnalyticsScreen />} />
             </Route>

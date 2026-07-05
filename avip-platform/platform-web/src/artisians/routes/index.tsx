@@ -8,7 +8,6 @@ import { OverviewScreen }        from '../components/app/screens/OverviewScreen'
 import { CreateAgentScreen }     from '../components/app/screens/CreateAgentScreen';
 import { MyAgentsScreen }        from '../components/app/screens/MyAgentsScreen';
 import { AnalyticsScreen }       from '../components/app/screens/AnalyticsScreen';
-import { SdkScreen }             from '../components/app/screens/SdkScreen';
 import { CampaignLaunchScreen }  from '../components/app/screens/CampaignLaunchScreen';
 import { CampaignAnalyticsScreen } from '../components/app/screens/CampaignAnalyticsScreen';
 
@@ -35,7 +34,6 @@ export const router = createBrowserRouter([
               { path: 'create',          element: <CreateAgentScreen /> },
               { path: 'agents',          element: <MyAgentsScreen /> },
               { path: 'analytics',       element: <AnalyticsScreen /> },
-              { path: 'sdk',             element: <SdkScreen /> },
               { path: 'campaign/:agentId', element: <CampaignLaunchScreen /> },
               { path: 'campaign-analytics/:agentId', element: <CampaignAnalyticsScreen /> },
             ],
