@@ -198,6 +198,13 @@ async def run_pstn_flow(
         logger.info("[agent] no workflowId in metadata — skip Temporal signal")
     logger.info("[agent] session done (%ds) reason=%r", duration, reason)
 
+    # Disconnect from room to hang up PSTN/SIP call
+    try:
+        logger.info("[agent] disconnecting from room %s to terminate the call", room_name)
+        await room.disconnect()
+    except Exception as exc:
+        logger.warning("[agent] failed to disconnect from room: %s", exc)
+
 
 async def speak_pstn_greeting(
     *,

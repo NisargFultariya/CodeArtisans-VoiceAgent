@@ -38,6 +38,9 @@ class OutboundCallController(
 
         val callId = UUID.randomUUID().toString().replace("-", "")
         
+        val isScheduled = (body.delayMinutes != null && body.delayMinutes > 0) || body.scheduledTimeEpochMs != null
+        val initialStatus = if (isScheduled) "SCHEDULED" else "CALLING"
+
         // 1. Persist call metadata in DB
         outboundCallRepository.create(
             id = callId,
@@ -46,8 +49,13 @@ class OutboundCallController(
             language = body.language.trim(),
             voice = body.voice.trim(),
             mode = mode,
-            status = "CALLING"
+            status = initialStatus
         )
+
+        if (isScheduled) {
+            val outcomeMsg = if (body.delayMinutes != null) "Scheduled in ${body.delayMinutes} mins" else "Scheduled for custom time"
+            outboundCallRepository.updateStatus(callId, "SCHEDULED", outcome = outcomeMsg)
+        }
 
         // 2. Start Temporal Workflow
         val workflowId = "outbound-$callId"
@@ -57,7 +65,9 @@ class OutboundCallController(
             scenario = body.scenario.trim(),
             language = body.language.trim(),
             voice = body.voice.trim(),
-            mode = mode
+            mode = mode,
+            delayMinutes = body.delayMinutes,
+            scheduledTimeEpochMs = body.scheduledTimeEpochMs
         )
 
         val options = WorkflowOptions.newBuilder()
@@ -144,7 +154,9 @@ data class CreateOutboundCallRequest(
     val scenario: String,
     val language: String,
     val voice: String,
-    val mode: String = "phone"
+    val mode: String = "phone",
+    val delayMinutes: Int? = null,
+    val scheduledTimeEpochMs: Long? = null
 )
 
 data class CreateOutboundCallResponse(

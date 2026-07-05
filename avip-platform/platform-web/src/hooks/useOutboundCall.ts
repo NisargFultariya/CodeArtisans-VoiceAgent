@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 export type CallProgressStatus =
   | "idle"
+  | "scheduled"
   | "dialing"
   | "ringing"
   | "connected"
@@ -16,6 +17,11 @@ export function useOutboundCall() {
   const [scenario, setScenario] = useState("recovery");
   const [language, setLanguage] = useState("hi-IN");
   const [voice, setVoice] = useState("priya");
+  
+  // Scheduling States
+  const [scheduleMode, setScheduleMode] = useState<"immediate" | "minutes" | "custom">("immediate");
+  const [delayMinutes, setDelayMinutes] = useState(5);
+  const [customTime, setCustomTime] = useState("");
   
   const [callId, setCallId] = useState<string | null>(null);
   const [status, setStatus] = useState<CallProgressStatus>("idle");
@@ -48,19 +54,28 @@ export function useOutboundCall() {
       return;
     }
     
-    setStatus("dialing");
+    const isScheduled = scheduleMode !== "immediate";
+    setStatus(isScheduled ? "scheduled" : "dialing");
     
     try {
+      const payload: any = {
+        phoneNumber: phoneNumber.trim(),
+        scenario,
+        language,
+        voice,
+        mode: "phone"
+      };
+
+      if (scheduleMode === "minutes") {
+        payload.delayMinutes = delayMinutes;
+      } else if (scheduleMode === "custom" && customTime) {
+        payload.scheduledTimeEpochMs = new Date(customTime).getTime();
+      }
+
       const response = await fetch("/api/calls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber.trim(),
-          scenario,
-          language,
-          voice,
-          mode: "phone"
-        })
+        body: JSON.stringify(payload)
       });
       
       if (!response.ok) {
@@ -82,7 +97,8 @@ export function useOutboundCall() {
           
           const rawStatus = update.status;
           
-          if (rawStatus === "CALLING") setStatus("dialing");
+          if (rawStatus === "SCHEDULED") setStatus("scheduled");
+          else if (rawStatus === "CALLING") setStatus("dialing");
           else if (rawStatus === "RINGING") setStatus("ringing");
           else if (rawStatus === "AGENT_JOINED") setStatus("ringing");
           else if (rawStatus === "CONNECTED") setStatus("connected");
@@ -121,7 +137,7 @@ export function useOutboundCall() {
       setStatus("failed");
       setError(err.message || "Failed to start call session.");
     }
-  }, [phoneNumber, scenario, language, voice]);
+  }, [phoneNumber, scenario, language, voice, scheduleMode, delayMinutes, customTime]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -141,6 +157,12 @@ export function useOutboundCall() {
     setLanguage,
     voice,
     setVoice,
+    scheduleMode,
+    setScheduleMode,
+    delayMinutes,
+    setDelayMinutes,
+    customTime,
+    setCustomTime,
     callId,
     status,
     transcript,

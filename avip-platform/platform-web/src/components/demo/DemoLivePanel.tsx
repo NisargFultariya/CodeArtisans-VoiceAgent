@@ -66,12 +66,16 @@ export function DemoLivePanel({ onAccessLost }: DemoLivePanelProps) {
   }
 
   // SSE Phone calling state steps
-  const phoneSteps: Array<{ key: CallProgressStatus; label: string; desc: string }> = [
+  const phoneSteps: Array<{ key: CallProgressStatus; label: string; desc: string }> = [];
+  if (phoneCall.status === "scheduled") {
+    phoneSteps.push({ key: "scheduled", label: "Scheduled", desc: "Temporal call scheduled" });
+  }
+  phoneSteps.push(
     { key: "dialing", label: "Dialing", desc: "Placing call via LiveKit SIP" },
     { key: "ringing", label: "Ringing", desc: "Recipient phone is ringing" },
     { key: "connected", label: "Connected", desc: "Agent and recipient talking" },
     { key: "completed", label: "Completed", desc: "Call ended and processed" }
-  ];
+  );
 
   return (
     <div className="mx-auto flex h-full min-h-0 max-w-4xl flex-col p-4 md:p-6">
@@ -134,19 +138,74 @@ export function DemoLivePanel({ onAccessLost }: DemoLivePanelProps) {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             {dialMode === "phone" ? (
-              <label className="space-y-1.5 col-span-1">
-                <span className="text-xs font-medium text-slate-600">Phone Number</span>
-                <Input
-                  type="tel"
-                  disabled={locked}
-                  value={phoneCall.phoneNumber}
-                  onChange={(e) => phoneCall.setPhoneNumber(e.target.value)}
-                  placeholder="+91 9876543210"
-                  className="h-9 border-slate-200 bg-white text-sm"
-                />
-              </label>
+              <>
+                <label className="space-y-1.5 col-span-1">
+                  <span className="text-xs font-medium text-slate-600">Phone Number</span>
+                  <Input
+                    type="tel"
+                    disabled={locked}
+                    value={phoneCall.phoneNumber}
+                    onChange={(e) => phoneCall.setPhoneNumber(e.target.value)}
+                    placeholder="+91 9876543210"
+                    className="h-9 border-slate-200 bg-white text-sm"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-slate-600">Schedule</span>
+                  <Select
+                    value={phoneCall.scheduleMode}
+                    onValueChange={(v) => v && phoneCall.setScheduleMode(v as any)}
+                    disabled={locked}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Immediate call</SelectItem>
+                      <SelectItem value="minutes">In minutes</SelectItem>
+                      <SelectItem value="custom">Custom time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+
+                {phoneCall.scheduleMode === "minutes" && (
+                  <label className="space-y-1.5">
+                    <span className="text-xs font-medium text-slate-600">Delay</span>
+                    <Select
+                      value={String(phoneCall.delayMinutes)}
+                      onValueChange={(v) => v && phoneCall.setDelayMinutes(Number(v))}
+                      disabled={locked}
+                    >
+                      <SelectTrigger className={selectTriggerClass}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 minute</SelectItem>
+                        <SelectItem value="5">5 minutes</SelectItem>
+                        <SelectItem value="10">10 minutes</SelectItem>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                )}
+
+                {phoneCall.scheduleMode === "custom" && (
+                  <label className="space-y-1.5">
+                    <span className="text-xs font-medium text-slate-600">Custom Time</span>
+                    <Input
+                      type="datetime-local"
+                      disabled={locked}
+                      value={phoneCall.customTime}
+                      onChange={(e) => phoneCall.setCustomTime(e.target.value)}
+                      className="h-9 border-slate-200 bg-white text-sm"
+                    />
+                  </label>
+                )}
+              </>
             ) : (
               <label className="space-y-1.5 col-span-1">
                 <span className="text-xs font-medium text-slate-600">Mic mode</span>
@@ -257,11 +316,14 @@ export function DemoLivePanel({ onAccessLost }: DemoLivePanelProps) {
                   (step.key === "connected" && (phoneCall.status === "speaking" || phoneCall.status === "listening"));
                 
                 const isPassed = (() => {
-                  const statesList = ["dialing", "ringing", "connected", "completed"];
-                  const currentIdx = statesList.indexOf(
-                    phoneCall.status === "speaking" || phoneCall.status === "listening" ? "connected" : phoneCall.status
-                  );
+                  const statesList = phoneCall.status === "scheduled"
+                    ? ["scheduled", "dialing", "ringing", "connected", "completed"]
+                    : ["dialing", "ringing", "connected", "completed"];
+                  
+                  const resolvedStatus = phoneCall.status === "speaking" || phoneCall.status === "listening" ? "connected" : phoneCall.status;
+                  const currentIdx = statesList.indexOf(resolvedStatus);
                   const stepIdx = statesList.indexOf(step.key);
+                  
                   return currentIdx > stepIdx || phoneCall.status === "completed";
                 })();
 

@@ -9,6 +9,8 @@ data class OutboundCallWorkflowInput(
     val language: String,
     val voice: String,
     val mode: String, // "phone" or "browser"
+    val delayMinutes: Int? = null,
+    val scheduledTimeEpochMs: Long? = null,
 )
 
 class CallStatusUpdatedEvent(

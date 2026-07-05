@@ -32,6 +32,21 @@ open class OutboundCallWorkflowImpl : OutboundCallWorkflow {
         while (attempt <= maxAttempts) {
             log.info("Starting call session for callId={}, attempt={}", currentInput.callId, attempt)
 
+            if (attempt == 1) {
+                if (currentInput.delayMinutes != null && currentInput.delayMinutes > 0) {
+                    log.info("Workflow sleeping for delayMinutes={} for callId={}", currentInput.delayMinutes, currentInput.callId)
+                    activities.updateStatus(currentInput.callId, "SCHEDULED", "Scheduled in ${currentInput.delayMinutes} mins")
+                    Workflow.sleep(Duration.ofMinutes(currentInput.delayMinutes.toLong()))
+                } else if (currentInput.scheduledTimeEpochMs != null) {
+                    val delayMs = currentInput.scheduledTimeEpochMs - Workflow.currentTimeMillis()
+                    if (delayMs > 0) {
+                        log.info("Workflow sleeping for delayMs={} for callId={}", delayMs, currentInput.callId)
+                        activities.updateStatus(currentInput.callId, "SCHEDULED", "Scheduled for custom time")
+                        Workflow.sleep(Duration.ofMillis(delayMs))
+                    }
+                }
+            }
+
             // 1. Update status to CALLING
             activities.updateStatus(
                 callId = currentInput.callId,
@@ -92,6 +107,11 @@ open class OutboundCallWorkflowImpl : OutboundCallWorkflow {
             }
 
             if (!gotSignal) {
+                try {
+                    activities.terminateCall(roomName)
+                } catch (ex: Exception) {
+                    log.warn("Failed to terminate call: {}", ex.message)
+                }
                 activities.updateStatus(
                     callId = currentInput.callId,
                     status = "CANCELLED",
@@ -103,6 +123,12 @@ open class OutboundCallWorkflowImpl : OutboundCallWorkflow {
             // 6. Complete and save results
             val payload = completedPayload!!
             val rawOutcome = payload.outcome.ifBlank { payload.reason }.ifBlank { "Success" }
+
+            try {
+                activities.terminateCall(roomName)
+            } catch (ex: Exception) {
+                log.warn("Failed to terminate call: {}", ex.message)
+            }
 
             activities.updateStatus(
                 callId = currentInput.callId,
@@ -124,25 +150,15 @@ open class OutboundCallWorkflowImpl : OutboundCallWorkflow {
                         activities.updateStatus(
                             callId = currentInput.callId,
                             status = "CALLBACK_SCHEDULED",
-                            outcome = "Rescheduled callback in ${delay.toMinutes()} mins ($callbackTime)"
+                            outcome = "Rescheduled callback in ${delay.toMinutes()} mins ($callbackTime)",
+                            durationSeconds = payload.callDurationSeconds,
+                            userUtterances = payload.userUtterances
                         )
 
                         // Reset signal and sleep
                         completedPayload = null
                         Workflow.sleep(delay)
 
-                        attempt++
-                        continue
-                    }
-                    "CALL_DISCONNECTED" -> {
-                        log.info("Call disconnected for callId={}. Retrying call (attempt {}/{})", currentInput.callId, attempt, maxAttempts)
-                        activities.updateStatus(
-                            callId = currentInput.callId,
-                            status = "RETRYING",
-                            outcome = "Call disconnected. Retrying call."
-                        )
-                        completedPayload = null
-                        Workflow.sleep(Duration.ofSeconds(10))
                         attempt++
                         continue
                     }

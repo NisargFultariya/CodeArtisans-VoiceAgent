@@ -43,11 +43,13 @@ async def run_pstn_session(
 
     await asyncio.sleep(0.8)
 
+    silence_seconds = 0.0
+
     while time.monotonic() < deadline and turns < 15:
         await asyncio.sleep(0.4)
         if not remote_participants(room):
             alone_ticks += 1
-            if alone_ticks >= 8:
+            if alone_ticks >= 3:  # Fast exit on caller disconnect (1.2s instead of 3.2s)
                 logger.info("[agent] %s: caller hung up", room.name)
                 if is_recruitment:
                     final_reason = await extract_recruitment_details(
@@ -60,7 +62,22 @@ async def run_pstn_session(
 
         utterances = state.list()
         if len(utterances) <= last:
+            silence_seconds += 0.4
+            if silence_seconds >= 10.0:
+                logger.info("[agent] %s: 10 seconds of silence/inactivity detected", room.name)
+                goodbye = "I didn't hear a response, so I will end the call now. Thank you for your time."
+                await say(session, goodbye)
+                await asyncio.sleep(2)
+                if is_recruitment:
+                    final_reason = await extract_recruitment_details(
+                        llm, chat_history, meta, final_outcome="NO_ANSWER"
+                    )
+                    return final_reason, state.list()
+                return "NO_ANSWER: silence timeout", utterances
             continue
+
+        # User spoke, reset silence timer
+        silence_seconds = 0.0
 
         # Add new candidate utterances
         for i in range(last, len(utterances)):
@@ -84,6 +101,7 @@ async def run_pstn_session(
             if reply.strip():
                 await say(session, reply)
                 chat_history.append({"role": "assistant", "content": reply})
+                silence_seconds = 0.0
 
             if ready_to_close:
                 final_reason = await extract_recruitment_details(
@@ -95,6 +113,7 @@ async def run_pstn_session(
             plan = await plan_demo_turn(llm, utterances, lang)
             if plan.reply.strip():
                 await say(session, plan.reply)
+                silence_seconds = 0.0
 
             if plan.ready_to_close:
                 reason = plan.failure_reason

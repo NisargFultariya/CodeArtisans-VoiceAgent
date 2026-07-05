@@ -30,6 +30,9 @@ interface OutboundCallActivities {
 
     @ActivityMethod(name = "OutboundCall_DialPhone")
     fun dialPhone(roomName: String, phoneNumber: String)
+
+    @ActivityMethod(name = "OutboundCall_TerminateCall")
+    fun terminateCall(roomName: String)
 }
 
 data class DispatchAgentResult(

@@ -140,6 +140,23 @@ class OutboundCallActivitiesImpl(
         telephonyAdapter.dialOutbound(roomName, phoneNumber)
     }
 
+    override fun terminateCall(roomName: String) {
+        val lk = avipProperties.livekit
+        val apiUrl = lk.resolvedApiUrl()
+        if (lk.url.isBlank() || apiUrl.isBlank() || lk.apiKey.isBlank() || lk.apiSecret.isBlank()) {
+            log.warn("LiveKit credentials not configured, skipping call termination")
+            return
+        }
+        try {
+            log.info("Deleting LiveKit room={} to hang up the SIP participant", roomName)
+            val roomClient = RoomServiceClient.createClient(apiUrl, lk.apiKey, lk.apiSecret)
+            roomClient.deleteRoom(roomName).execute()
+            log.info("LiveKit room={} successfully deleted", roomName)
+        } catch (ex: Exception) {
+            log.warn("Failed to delete LiveKit room={}: {}", roomName, ex.message)
+        }
+    }
+
     private fun waitForAgentParticipant(
         roomClient: RoomServiceClient,
         roomName: String,
