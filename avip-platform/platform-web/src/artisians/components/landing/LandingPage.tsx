@@ -56,7 +56,7 @@ export const LandingPage: React.FC = () => {
               <h1>Give every conversation a voice that <em>never clocks out</em></h1>
               <p>Launch AI voice agents that call your leads, answer your customers, and work every queue in between — configured in minutes, monitored in real time, built for teams managing many brands from one place.</p>
               <div className="land-hero-actions">
-                <button className="btn btn-accent btn-lg" onClick={() => navigate('/signup')}>
+                <button className="btn btn-accent btn-lg test" onClick={() => navigate('/signup')}>
                   <Plus size={15} aria-hidden="true" />Create your first agent
                 </button>
                 <button className="btn btn-ghost btn-lg" onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
