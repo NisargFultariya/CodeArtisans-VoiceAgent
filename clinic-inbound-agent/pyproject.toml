@@ -1,0 +1,35 @@
+[project]
+name = "clinic-inbound-agent"
+version = "0.1.0"
+description = "Inbound AI clinic receptionist — books appointments over the phone"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Reuse the existing SDK from avip-agent-main (editable install)
+    "avip-agent @ file:///../avip-agent-main",
+    "livekit-agents[silero]~=1.2",
+    "httpx>=0.28",
+    "python-dotenv>=1.0",
+    "aiosqlite>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[project.scripts]
+clinic-agent = "agent:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["clinic_inbound_agent"]
+only-include = ["clinic_inbound_agent", "agent.py"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

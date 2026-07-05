@@ -1,0 +1,4 @@
+livekit-agents[silero]~=1.2
+httpx>=0.28
+python-dotenv>=1.0
+aiosqlite>=0.20

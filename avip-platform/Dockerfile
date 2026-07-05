@@ -26,6 +26,7 @@ COPY platform-workflow/src ./platform-workflow/src
 COPY --from=web /web/dist ./platform-api/src/main/resources/static
 
 RUN chmod +x gradlew \
+    && sed -i 's/\r$//' gradlew \
     && ./gradlew :${MODULE}:bootJar -x test -PskipWebBuild --no-daemon
 
 FROM eclipse-temurin:25-jre-jammy

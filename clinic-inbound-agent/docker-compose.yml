@@ -1,0 +1,42 @@
+name: clinic-inbound
+
+services:
+  clinic-backend:
+    build:
+      context: ../clinic-backend
+    ports:
+      - "8001:8001"
+    env_file: ../clinic-backend/.env
+    volumes:
+      - clinic-db:/app/data
+    environment:
+      DB_PATH: /app/data/clinic.db
+    restart: unless-stopped
+
+  payments:
+    build:
+      context: ../payments
+    ports:
+      - "8002:8002"
+    env_file: ../payments/.env
+    environment:
+      CLINIC_BACKEND_URL: http://clinic-backend:8001
+    depends_on:
+      - clinic-backend
+    restart: unless-stopped
+
+  clinic-agent:
+    build:
+      context: ..
+      dockerfile: clinic-inbound-agent/Dockerfile
+    env_file: .env
+    environment:
+      CLINIC_BACKEND_URL: http://clinic-backend:8001
+      PAYMENTS_SERVICE_URL: http://payments:8002
+    depends_on:
+      - clinic-backend
+      - payments
+    restart: unless-stopped
+
+volumes:
+  clinic-db:

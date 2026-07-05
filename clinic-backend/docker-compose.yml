@@ -1,0 +1,16 @@
+name: clinic-booking
+
+services:
+  clinic-backend:
+    build: .
+    ports:
+      - "8001:8001"
+    env_file: .env
+    volumes:
+      - clinic-db:/app/data
+    environment:
+      DB_PATH: /app/data/clinic.db
+    restart: unless-stopped
+
+volumes:
+  clinic-db:
